@@ -45,7 +45,7 @@ public class TestCsvEscapeFixer {
     }
 
     @Test
-    public void testCsvEscapeFixer() throws IOException {
+    public void testGreedyCsvEscapeFixer() throws IOException {
         Reader r = new GreedyCsvEscapeFixer(new FileReader("/home/ninjav/test.csv"));
         int read = r.read();
         while (read != -1) {
@@ -129,4 +129,97 @@ public class TestCsvEscapeFixer {
             reader.close();
         }
     }
+
+    @Test
+    public void testBufferedCsvExcapeFixer() throws IOException {
+        Reader r = new BufferedCsvEscapeFixer(new FileReader("/home/ninjav/test.csv"));
+        int ch = r.read();
+        while (ch != -1) {
+            System.out.print((char) ch);
+            ch = r.read();
+        }
+    }
+
+
+    public static class BufferedCsvEscapeFixer extends Reader {
+
+        final Reader reader;
+        final CharBuffer cout = CharBuffer.allocate(8192 * 2);
+
+        static final int OUT_CELL = 1;
+        static final int IN_CELL = 2;
+        int state = OUT_CELL;
+
+        boolean done = false;
+
+        public BufferedCsvEscapeFixer(Reader reader) {
+            this.reader = new BufferedReader(reader);
+        }
+
+        // Keep track of chars read/written
+        private static class Stats {
+            public int rchars = 0;
+            public int wchars = 0;
+        }
+
+        // Read some data from the reader, fixing quotes as we go. Store output in cout.
+        private Stats readChunk(int len) throws IOException {
+            int in;
+            Stats s = new Stats();
+            while ((in = reader.read()) != -1) {
+                char ch = (char)in;
+                reader.mark(2);
+                char next = (char)reader.read();
+                reader.reset();
+
+                if (ch == '"' && state == OUT_CELL) {
+                    cout.put(ch);
+                    s.wchars++;
+                    state = IN_CELL;
+                } else if (ch == '"' && state == IN_CELL) {
+                    cout.put(ch);
+                    s.wchars++;
+                    if (next == ',' || next == '\r' || next == '\n') {
+                        state = OUT_CELL;
+                    } else {
+                        cout.put('"');
+                        s.wchars++;
+                    }
+                } else {
+                    cout.put(ch);
+                    s.wchars++;
+                }
+                if (++s.rchars >= len) {
+                    break;
+                }
+            }
+            return s;
+        }
+
+        @Override
+        public int read(char[] chars, int offset, int len) throws IOException {
+            if (done) {
+                return -1;
+            }
+
+            Stats s = readChunk(len);
+            cout.position(0);
+            for (int i = 0; i < s.rchars; i++) {
+                chars[i] = cout.get();
+            }
+            cout.position(s.wchars - s.rchars);
+            if (s.rchars < len && s.wchars < len) {
+                done = true;
+            }
+            if (s.rchars == 0 && s.wchars > 0) {
+                return s.rchars;
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            reader.close();
+        }
+    }
+
 }
