@@ -1,138 +1,20 @@
 package org.ninjav.csv;
 
+import com.opencsv.*;
+import com.opencsv.exceptions.CsvException;
+import com.opencsv.exceptions.CsvMalformedLineException;
 import org.junit.Test;
 
 import java.io.*;
 import java.nio.CharBuffer;
+import java.util.Arrays;
+import java.util.List;
 
 public class TestCsvEscapeFixer {
 
-    final CharBuffer cout = CharBuffer.allocate(8192 * 2);
-    static final int OUT_CELL = 1;
-    static final int IN_CELL = 2;
-    int state = OUT_CELL;
-
     @Test
-    public void reacChars() throws IOException {
-        Reader r = new BufferedReader(new FileReader("/home/ninjav/test.csv"));
-
-        int read;
-        while ((read = r.read()) != -1) {
-            char ch = (char)read;
-            r.mark(2);
-            char next = (char)r.read();
-            r.reset();
-
-            if (ch == '"' && state == OUT_CELL) {
-                cout.append(ch);
-                state = IN_CELL;
-            } else if (ch == '"' && state == IN_CELL) {
-                if (next == ',' || next == '\r' || next == '\n') {
-                    state = OUT_CELL;
-                    cout.append(ch);
-                } else {
-                    cout.append('"');
-                    cout.append('"');
-                }
-            } else {
-                cout.append(ch);
-            }
-        }
-        r.close();
-
-        System.out.println("CSV:");
-        System.out.println(new String(cout.array()));
-    }
-
-    @Test
-    public void testGreedyCsvEscapeFixer() throws IOException {
-        Reader r = new GreedyCsvEscapeFixer(new FileReader("/home/ninjav/test.csv"));
-        int read = r.read();
-        while (read != -1) {
-            System.out.print((char) read);
-            read = r.read();
-        }
-        r.close();
-    }
-
-    public static class GreedyCsvEscapeFixer extends Reader {
-
-        final Reader reader;
-        final CharBuffer cout = CharBuffer.allocate(8192 * 2);
-
-        static final int OUT_CELL = 1;
-        static final int IN_CELL = 2;
-        int state = OUT_CELL;
-        int charcount = 0;
-
-        boolean initialized = false;
-        boolean done = false;
-
-        public GreedyCsvEscapeFixer(Reader reader) {
-            this.reader = new BufferedReader(reader);
-        }
-
-        // Read all data from the reader, fixing quotes as we go. Store output in cout.
-        private void initialize() throws IOException {
-            int read;
-            while ((read = reader.read()) != -1) {
-                char ch = (char)read;
-                reader.mark(2);
-                char next = (char)reader.read();
-                reader.reset();
-
-                if (ch == '"' && state == OUT_CELL) {
-                    cout.put(ch);
-                    state = IN_CELL;
-                } else if (ch == '"' && state == IN_CELL) {
-                    if (next == ',' || next == '\r' || next == '\n') {
-                        state = OUT_CELL;
-                        cout.put(ch);
-                    } else {
-                        cout.put('"');
-                        cout.put('"');
-                    }
-                } else {
-                    cout.put(ch);
-                }
-            }
-            initialized = true;
-        }
-
-        @Override
-        public int read(char[] chars, int offset, int len) throws IOException {
-            if (done) {
-                return -1;
-            }
-            if (!initialized) {
-                initialize();
-                charcount = cout.position() - 1;
-                cout.position(0);
-            }
-            // Systematically hand back chunks of cout until empty.
-            int count = len;
-            if (charcount - cout.position() < len) {
-                count = charcount - cout.position() - 1;
-            }
-
-            for (int i = 0; i < count; i++) {
-                chars[i] = cout.get();
-            }
-            if (count < len) {
-                done = true;
-            }
-            return count;
-        }
-
-        @Override
-        public void close() throws IOException {
-            reader.close();
-        }
-    }
-
-    @Test
-    public void testBufferedCsvExcapeFixer() throws IOException {
-        Reader r = new BufferedCsvEscapeFixer(new FileReader("/home/ninjav/test.csv"));
+    public void testBufferedCsvEscapeFixer() throws IOException {
+        Reader r = new CsvEscapeFixer(new FileReader("/home/ninjav/test.csv"));
         int ch = r.read();
         while (ch != -1) {
             System.out.print((char) ch);
@@ -140,11 +22,58 @@ public class TestCsvEscapeFixer {
         }
     }
 
+    @Test(expected = CsvMalformedLineException.class)
+    public void testOpenCsv() throws IOException, CsvException {
+        final CSVReader csv = new CSVReaderBuilder(
+                new FileReader("/home/ninjav/test.csv"))
+                .withCSVParser(new RFC4180Parser())
+                .withSkipLines(1)
+                .build();
+        List<String[]> result = csv.readAll();
+        result.forEach(l -> {
+            Arrays.stream(l).forEach(s -> System.out.print(s + ","));
+            System.out.println();
+        });
+    }
 
-    public static class BufferedCsvEscapeFixer extends Reader {
+    @Test
+    public void testOpenCsv_withBufferedCsvEscapeFixer() throws IOException, CsvException {
+        final CSVReader csv = new CSVReaderBuilder(
+                new CsvEscapeFixer(
+                        new FileReader("/home/ninjav/test.csv")))
+                .withCSVParser(new RFC4180Parser())
+                .withSkipLines(1)
+                .build();
+        List<String[]> result = csv.readAll();
+        result.forEach(l -> {
+            Arrays.stream(l).forEach(s -> System.out.print(s + ","));
+            System.out.println();
+        });
+
+    }
+
+    @Test
+    public void withTabDelimitedCsv_testOpenCsv() throws IOException, CsvException {
+        final CSVReader csv = new CSVReaderBuilder(
+                new FileReader("/home/ninjav/test.csv"))
+                .withCSVParser(new CSVParserBuilder()
+                        .withStrictQuotes(false)
+                        .withIgnoreQuotations(true)
+                        .build())
+                .withSkipLines(1)
+                .build();
+        List<String[]> result = csv.readAll();
+        result.forEach(l -> {
+            Arrays.stream(l).forEach(s -> System.out.print(s + "|"));
+            System.out.println();
+        });
+    }
+
+
+    public static class CsvEscapeFixer extends Reader {
 
         final Reader reader;
-        final CharBuffer cout = CharBuffer.allocate(8192 * 2);
+        final CharBuffer buf = CharBuffer.allocate(8192 * 2);
 
         static final int OUT_CELL = 1;
         static final int IN_CELL = 2;
@@ -152,68 +81,65 @@ public class TestCsvEscapeFixer {
 
         boolean done = false;
 
-        public BufferedCsvEscapeFixer(Reader reader) {
+        public CsvEscapeFixer(Reader reader) {
             this.reader = new BufferedReader(reader);
         }
 
-        // Keep track of chars read/written
-        private static class Stats {
-            public int rchars = 0;
-            public int wchars = 0;
-        }
-
-        // Read some data from the reader, fixing quotes as we go. Store output in cout.
-        private Stats readChunk(int len) throws IOException {
+        // Read some data from the reader, fixing quotes as we go. Store output in buf.
+        private int readChunk(int len) throws IOException {
             int in;
-            Stats s = new Stats();
+            int rchars = 0;
             while ((in = reader.read()) != -1) {
-                char ch = (char)in;
+                char ch = (char) in;
                 reader.mark(2);
-                char next = (char)reader.read();
+                char next = (char) reader.read();
                 reader.reset();
 
                 if (ch == '"' && state == OUT_CELL) {
-                    cout.put(ch);
-                    s.wchars++;
+                    buf.put(ch);
                     state = IN_CELL;
                 } else if (ch == '"' && state == IN_CELL) {
-                    cout.put(ch);
-                    s.wchars++;
+                    buf.put(ch);
                     if (next == ',' || next == '\r' || next == '\n') {
                         state = OUT_CELL;
                     } else {
-                        cout.put('"');
-                        s.wchars++;
+                        buf.put('"');
                     }
                 } else {
-                    cout.put(ch);
-                    s.wchars++;
+                    buf.put(ch);
                 }
-                if (++s.rchars >= len) {
+                if (++rchars >= len) {
                     break;
                 }
             }
-            return s;
+            return rchars;
         }
 
         @Override
         public int read(char[] chars, int offset, int len) throws IOException {
-            if (done) {
-                return -1;
+            if (!done) {
+                int nchars = readChunk(len);
+                if (nchars == 0) {
+                    done = true;
+                }
+                return handBack(chars, len);
+            } else {
+                if (buf.hasRemaining()) {
+                    return handBack(chars, len);
+                } else {
+                    return -1;
+                }
             }
+        }
 
-            Stats s = readChunk(len);
-            cout.position(0);
-            for (int i = 0; i < s.rchars; i++) {
-                chars[i] = cout.get();
+        int handBack(char[] chars, int len) {
+            int written = 0;
+            buf.flip();
+            while (buf.hasRemaining() && (written < len)) {
+                chars[written++] = buf.get();
             }
-            cout.position(s.wchars - s.rchars);
-            if (s.rchars < len && s.wchars < len) {
-                done = true;
-            }
-            if (s.rchars == 0 && s.wchars > 0) {
-                return s.rchars;
-            }
+            buf.compact();
+            return written - 1;
         }
 
         @Override
@@ -221,5 +147,16 @@ public class TestCsvEscapeFixer {
             reader.close();
         }
     }
+
+
+    @Test
+    public void testFileReader() throws IOException {
+        BufferedReader r = new BufferedReader(new CsvEscapeFixer(new FileReader("/home/ninjav/test2.csv")));
+        String line;
+        while ((line = r.readLine()) != null) {
+            System.out.println(line);
+        }
+    }
+
 
 }
