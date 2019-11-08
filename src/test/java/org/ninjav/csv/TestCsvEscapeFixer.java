@@ -13,52 +13,12 @@ import java.util.List;
 public class TestCsvEscapeFixer {
 
     @Test
-    public void testBufferedCsvEscapeFixer() throws IOException {
-        Reader r = new CsvEscapeFixer(new FileReader("/home/ninjav/test.csv"));
-        int ch = r.read();
-        while (ch != -1) {
-            System.out.print((char) ch);
-            ch = r.read();
-        }
-    }
-
-    @Test(expected = CsvMalformedLineException.class)
-    public void testOpenCsv() throws IOException, CsvException {
+    public void testOpenCsv_withCsvTabber_onMEBFL1PF() throws IOException, CsvException {
         final CSVReader csv = new CSVReaderBuilder(
-                new FileReader("/home/ninjav/test.csv"))
-                .withCSVParser(new RFC4180Parser())
-                .withSkipLines(1)
-                .build();
-        List<String[]> result = csv.readAll();
-        result.forEach(l -> {
-            Arrays.stream(l).forEach(s -> System.out.print(s + ","));
-            System.out.println();
-        });
-    }
-
-    @Test
-    public void testOpenCsv_withBufferedCsvEscapeFixer() throws IOException, CsvException {
-        final CSVReader csv = new CSVReaderBuilder(
-                new CsvEscapeFixer(
-                        new FileReader("/home/ninjav/test.csv")))
-                .withCSVParser(new RFC4180Parser())
-                .withSkipLines(1)
-                .build();
-        List<String[]> result = csv.readAll();
-        result.forEach(l -> {
-            Arrays.stream(l).forEach(s -> System.out.print(s + ","));
-            System.out.println();
-        });
-
-    }
-
-    @Test
-    public void withTabDelimitedCsv_testOpenCsv() throws IOException, CsvException {
-        final CSVReader csv = new CSVReaderBuilder(
-                new FileReader("/home/ninjav/test.csv"))
+                new CsvTabber(
+                        new FileReader("/home/ninjav/brokerbase/20191104/MEBFL1PF.TXT")))
                 .withCSVParser(new CSVParserBuilder()
-                        .withStrictQuotes(false)
-                        .withIgnoreQuotations(true)
+                        .withQuoteChar('|')
                         .build())
                 .withSkipLines(1)
                 .build();
@@ -69,8 +29,58 @@ public class TestCsvEscapeFixer {
         });
     }
 
+    @Test
+    public void testOpenCsv_withCsvTabber_onMEBFL2PF() throws IOException, CsvException {
+        final CSVReader csv = new CSVReaderBuilder(
+                new CsvTabber(
+                        new FileReader("/home/ninjav/brokerbase/20191104/MEBFL2PF.TXT")))
+                .withCSVParser(new CSVParserBuilder()
+                        .withQuoteChar('|')
+                        .build())
+                .withSkipLines(1)
+                .build();
+        List<String[]> result = csv.readAll();
+        result.forEach(l -> {
+            Arrays.stream(l).forEach(s -> System.out.print(s + "|"));
+            System.out.println();
+        });
+    }
 
-    public static class CsvEscapeFixer extends Reader {
+    @Test
+    public void testOpenCsv_withCsvTabber_onMEBFL3PF() throws IOException, CsvException {
+        final CSVReader csv = new CSVReaderBuilder(
+                new CsvTabber(
+                        new FileReader("/home/ninjav/brokerbase/20191104/MEBFL3PF.TXT")))
+                .withCSVParser(new CSVParserBuilder()
+                        .withQuoteChar('|')
+                        .build())
+                .withSkipLines(1)
+                .build();
+        List<String[]> result = csv.readAll();
+        result.forEach(l -> {
+            Arrays.stream(l).forEach(s -> System.out.print(s + "|"));
+            System.out.println();
+        });
+    }
+
+    @Test
+    public void testOpenCsv_withCsvTabber_onMEBFLTPF() throws IOException, CsvException {
+        final CSVReader csv = new CSVReaderBuilder(
+                new CsvTabber(
+                        new FileReader("/home/ninjav/brokerbase/20191104/MEBFLTPF.TXT")))
+                .withCSVParser(new CSVParserBuilder()
+                        .withQuoteChar('|')
+                        .build())
+                .withSkipLines(1)
+                .build();
+        List<String[]> result = csv.readAll();
+        result.forEach(l -> {
+            Arrays.stream(l).forEach(s -> System.out.print(s + "|"));
+            System.out.println();
+        });
+    }
+
+    public static class CsvTabber extends Reader {
 
         final Reader reader;
         final CharBuffer buf = CharBuffer.allocate(8192 * 2);
@@ -81,7 +91,7 @@ public class TestCsvEscapeFixer {
 
         boolean done = false;
 
-        public CsvEscapeFixer(Reader reader) {
+        public CsvTabber(Reader reader) {
             this.reader = new BufferedReader(reader);
         }
 
@@ -96,11 +106,11 @@ public class TestCsvEscapeFixer {
                 reader.reset();
 
                 if (ch == '"' && state == OUT_CELL) {
-                    buf.put(ch);
+                    buf.put('|');
                     state = IN_CELL;
                 } else if (ch == '"' && state == IN_CELL) {
-                    buf.put(ch);
                     if (next == ',' || next == '\r' || next == '\n') {
+                        buf.put('|');
                         state = OUT_CELL;
                     } else {
                         buf.put('"');
@@ -148,15 +158,19 @@ public class TestCsvEscapeFixer {
         }
     }
 
-
     @Test
-    public void testFileReader() throws IOException {
-        BufferedReader r = new BufferedReader(new CsvEscapeFixer(new FileReader("/home/ninjav/test2.csv")));
-        String line;
-        while ((line = r.readLine()) != null) {
-            System.out.println(line);
-        }
+    public void testOpenCsv_withPipesAsQuotes() throws IOException, CsvException {
+        final CSVReader csv = new CSVReaderBuilder(
+                new FileReader("/home/ninjav/brokerbase/20191104/test.csv"))
+                .withCSVParser(new CSVParserBuilder()
+                        .withQuoteChar('|')
+                        .build())
+                .withSkipLines(1)
+                .build();
+        List<String[]> result = csv.readAll();
+        result.forEach(l -> {
+            Arrays.stream(l).forEach(s -> System.out.print(s + "|"));
+            System.out.println();
+        });
     }
-
-
 }
