@@ -3,6 +3,7 @@ package org.ninjav.csv;
 import com.opencsv.*;
 import com.opencsv.exceptions.CsvException;
 import com.opencsv.exceptions.CsvMalformedLineException;
+import com.opencsv.exceptions.CsvValidationException;
 import org.junit.Test;
 
 import java.io.*;
@@ -11,6 +12,45 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TestCsvEscapeFixer {
+
+
+    @Test
+    public void transformCsvToTabQuotes() throws IOException, CsvValidationException {
+        final BufferedReader fin = new BufferedReader(
+                new FileReader("/home/ninjav/brokerbase/20191104/MEBFL1PF.TXT"));
+
+        String line;
+        int skip = 1;
+        while ((line = fin.readLine()) != null) {
+            if (skip-- > 0) {
+                continue;
+            }
+            line = line.replaceAll("\",\"", "\t");
+            line = line.replaceAll("^\"", "");
+            line = line.replaceAll("\"$", "");
+
+            String[] cells = line.split("\t");
+            assert (cells.length == 6);
+            System.out.println(Arrays.toString(cells));
+        }
+    }
+
+
+    @Test
+    public void testOpenCsv_withOddEscapeChar() throws IOException, CsvValidationException {
+        final CSVReader csv = new CSVReaderBuilder(
+                        new FileReader("/home/ninjav/brokerbase/20191104/MEBFL1PF.TXT"))
+                .withCSVParser(new CSVParserBuilder()
+                        .withEscapeChar('|')
+                        .withStrictQuotes(false)
+                        .build())
+                .withSkipLines(1)
+                .build();
+        String[] line;
+        while ((line = csv.readNext()) != null) {
+            Arrays.stream(line).forEach(s -> System.out.print(s + "|"));
+        }
+    }
 
     @Test
     public void testOpenCsv_withCsvTabber_onMEBFL1PF() throws IOException, CsvException {
@@ -22,11 +62,10 @@ public class TestCsvEscapeFixer {
                         .build())
                 .withSkipLines(1)
                 .build();
-        List<String[]> result = csv.readAll();
-        result.forEach(l -> {
-            Arrays.stream(l).forEach(s -> System.out.print(s + "|"));
-            System.out.println();
-        });
+        String[] line;
+        while ((line = csv.readNext()) != null) {
+            Arrays.stream(line).forEach(s -> System.out.print(s + "|"));
+        }
     }
 
     @Test
