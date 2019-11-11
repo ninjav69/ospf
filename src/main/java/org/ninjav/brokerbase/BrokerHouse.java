@@ -26,12 +26,12 @@ public class BrokerHouse {
                 ")\n");
     }
 
-    static PreparedStatement insertBrokerhouseStmt;
+    static PreparedStatement insertStmt;
 
     public static void insertBrokerHouse(final Connection con, final List<String> cells) {
         try {
-            if (insertBrokerhouseStmt == null) {
-                insertBrokerhouseStmt = con.prepareStatement(
+            if (insertStmt == null) {
+                insertStmt = con.prepareStatement(
                         "INSERT INTO B_BH (\n" +
                                 "        BROKER_HOUSE_CODE,\n" +
                                 "        BROKER_HOUSE_NAME,\n" +
@@ -52,10 +52,10 @@ public class BrokerHouse {
 
             cells.set(2, format.apply(cells.get(2)));
             for (int i = 0; i < cells.size(); i++) {
-                insertBrokerhouseStmt.setString(i + 1, cells.get(i));
+                insertStmt.setString(i + 1, cells.get(i));
             }
 
-            insertBrokerhouseStmt.execute();
+            insertStmt.execute();
 
         } catch (SQLException e) {
             throw new RuntimeException(e);

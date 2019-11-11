@@ -33,12 +33,12 @@ public class Adviser {
                 ")\n");
     }
 
-    static PreparedStatement insertAdviserStmt;
+    static PreparedStatement insertStmt;
 
     public static void insertAdviser(Connection con, List<String> cells) {
         try {
-            if (insertAdviserStmt == null) {
-                insertAdviserStmt = con.prepareStatement(
+            if (insertStmt == null) {
+                insertStmt = con.prepareStatement(
                         "INSERT INTO B_AD (\n" +
                                 "        ID,\n" +
                                 "        RELATION_ID,\n" +
@@ -77,10 +77,10 @@ public class Adviser {
             }
 
             for (int i = 0; i < cells.size(); i++) {
-                insertAdviserStmt.setString(i + 1, cells.get(i));
+                insertStmt.setString(i + 1, cells.get(i));
             }
 
-            insertAdviserStmt.execute();
+            insertStmt.execute();
 
         } catch (SQLException e) {
             throw new RuntimeException(e);

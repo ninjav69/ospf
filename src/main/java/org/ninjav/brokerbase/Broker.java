@@ -51,12 +51,12 @@ public class Broker {
                 ")\n");
     }
 
-    static PreparedStatement insertBrokerStmt;
+    static PreparedStatement insertStmt;
 
     public static void insertBroker(final Connection con, final List<String> cells) {
         try {
-            if (insertBrokerStmt == null) {
-                insertBrokerStmt = con.prepareStatement(
+            if (insertStmt == null) {
+                insertStmt = con.prepareStatement(
                         "INSERT INTO B_BROKER (\n" +
                                 "        BRANCH,\n" +
                                 "        ADVISER_CODE,\n" +
@@ -129,10 +129,10 @@ public class Broker {
             }
 
             for (int i = 0; i < cells.size(); i++) {
-                insertBrokerStmt.setString(i + 1, cells.get(i));
+                insertStmt.setString(i + 1, cells.get(i));
             }
 
-            insertBrokerStmt.execute();
+            insertStmt.execute();
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
