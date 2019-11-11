@@ -1,8 +1,7 @@
-package org.ninjav.csv;
+package org.ninjav.brokerbase;
 
 import org.junit.Test;
-import org.ninjav.broker.BrokerData;
-import org.ninjav.data.DB;
+import org.ninjav.commons.data.DB;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,30 +9,30 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static org.ninjav.csv.CSV.*;
+import static org.ninjav.commons.csv.CSV.*;
 
 import static org.junit.Assert.assertTrue;
 
-public class TestMyCsvReader {
+public class TestBrokerbaseImport {
 
     static final String DB_DRIVER = "org.sqlite.JDBC";
     static final String DB_URL = "jdbc:sqlite::memory:";
     static final String DB_USER = "";
     static final String DB_PASS = "";
 
-    static final String brokerHouseCsv = "/home/ninjav/csv/20191104/MEBFL1PF.TXT";
-    static final String branchCsv = "/home/ninjav/csv/20191104/MEBFL2PF.TXT";
-    static final String adviserCsv = "/home/ninjav/csv/20191104/MEBFL3PF.TXT";
-    static final String brokerCsv = "/home/ninjav/csv/20191104/MEBFLTPF.TXT";
+    static final String brokerHouseCsv = "/home/ninjav/brokerbase/20191104/MEBFL1PF.TXT";
+    static final String branchCsv = "/home/ninjav/brokerbase/20191104/MEBFL2PF.TXT";
+    static final String adviserCsv = "/home/ninjav/brokerbase/20191104/MEBFL3PF.TXT";
+    static final String brokerCsv = "/home/ninjav/brokerbase/20191104/MEBFLTPF.TXT";
 
     @Test
     public void testCsvMagicForAllBBFiles() {
         DB.use(DB_DRIVER, DB_URL, DB_USER, DB_PASS, con -> {
             //BrokerData.dropBrokerHouse(con);
-            BrokerData.createBrokerHouse(con);
+            BrokerHouse.createBrokerHouse(con);
 
             withLinesIn(brokerHouseCsv, assertCellCount(6)
-                    .andThen(b -> BrokerData.insertBrokerHouse(con, b)));
+                    .andThen(b -> BrokerHouse.insertBrokerHouse(con, b)));
 
             try {
                 final Statement stmt = con.createStatement();
@@ -50,10 +49,10 @@ public class TestMyCsvReader {
                 throw new RuntimeException(e);
             }
 
-            BrokerData.createBroker(con);
+            Broker.createBroker(con);
 
             withLinesIn(brokerCsv, assertCellCount(33)
-                    .andThen(b -> BrokerData.insertBroker(con, b)));
+                    .andThen(b -> Broker.insertBroker(con, b)));
 
             try {
                 final Statement stmt = con.createStatement();
@@ -97,10 +96,10 @@ public class TestMyCsvReader {
                 throw new RuntimeException(e);
             }
 
-            BrokerData.createBranch(con);
+            Branch.createBranch(con);
 
             withLinesIn(branchCsv, assertCellCount(8)
-                    .andThen(b -> BrokerData.insertBranch(con, b)));
+                    .andThen(b -> Branch.insertBranch(con, b)));
 
             try {
                 final Statement stmt = con.createStatement();
@@ -119,10 +118,10 @@ public class TestMyCsvReader {
                 throw new RuntimeException(e);
             }
 
-            BrokerData.createAdviser(con);
+            Adviser.createAdviser(con);
 
             withLinesIn(adviserCsv, assertCellCount(16)
-                    .andThen(a -> BrokerData.insertAdviser(con, a)));
+                    .andThen(a -> Adviser.insertAdviser(con, a)));
 
             try {
                 final Statement stmt = con.createStatement();

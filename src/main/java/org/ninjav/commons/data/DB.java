@@ -1,4 +1,4 @@
-package org.ninjav.data;
+package org.ninjav.commons.data;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

@@ -1,4 +1,4 @@
-package org.ninjav.csv;
+package org.ninjav.commons.csv;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,11 +10,11 @@ import java.util.stream.Stream;
 
 public class CSV {
 
-    static Consumer<List<String>> showCells() {
+    static public Consumer<List<String>> showCells() {
         return System.out::println;
     }
 
-    static void withLinesIn(final String csvFile, final Consumer<List<String>> handleLine) {
+    static public void withLinesIn(final String csvFile, final Consumer<List<String>> handleLine) {
         try(Stream<String> stream = Files.lines(Paths.get(csvFile))) {
             stream.map(l -> l.replaceAll("\",\"", "|"))
                     .map(l -> l.replaceAll("^\"", ""))
